@@ -4,11 +4,18 @@ import json
 import time
 import os
 
-# Load prompts from JSON file
+# Load prompts from Markdown files
 @st.cache_data
 def load_prompts():
-    with open('Prompts.json', 'r') as file:
-        return json.load(file)
+    with open('prompts/config.json', 'r') as config_file:
+        config = json.load(config_file)
+    
+    prompts = {}
+    for key, filename in config.items():
+        with open(f'prompts/{filename}', 'r') as file:
+            prompts[key] = file.read()
+    
+    return prompts
 
 prompts = load_prompts()
 
@@ -16,27 +23,15 @@ prompts = load_prompts()
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ""
-
-def validate_api_key(api_key):
-    if not api_key:
-        return False
-    return len(api_key) > 10
-
 def send_prompt_to_claude(prompt, system_prompt=""):
-    if not validate_api_key(st.session_state.api_key):
-        raise ValueError("Invalid API key. Please check your API key and try again.")
+    api_key = st.secrets["CLAUDE_KEY"]
     
-    client = anthropic.Anthropic(
-        api_key=st.session_state.api_key,
-        default_headers={"anthropic-beta": "max-tokens-3-5-haiku-2024-03-07"}
-    )
+    client = anthropic.Anthropic(api_key=api_key)
 
     try:
         response = client.messages.create(
             model="claude-3-haiku-20240307",
-            max_tokens=4096,  # Haiku has a lower max_tokens limit
+            max_tokens=4096,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": prompt}
@@ -52,10 +47,7 @@ def send_prompt_to_claude(prompt, system_prompt=""):
         raise Exception(f"An unexpected error occurred: {str(e)}")
 
 # Streamlit UI
-st.title("T&C Generator Chatbot")
-
-# API Key input
-st.session_state.api_key = st.text_input("Enter your Anthropic API Key:", type="password")
+st.title("T&C Generator Chatbot (Claude-3-Haiku)")
 
 # User input form
 with st.form("user_input_form"):
@@ -71,12 +63,9 @@ with st.form("user_input_form"):
     submit_button = st.form_submit_button("Generate T&Cs")
 
 if submit_button:
-    if not validate_api_key(st.session_state.api_key):
-        st.error("Please enter a valid API key.")
-    elif not all([promotion_reward, promotion_period, eligible_providers, max_redemptions]):
+    if not all([promotion_reward, promotion_period, eligible_providers, max_redemptions]):
         st.error("Please fill in all required fields (1-4).")
     else:
-        # Construct the user input
         user_input = f"""
         1. {promotion_reward}
         2. {promotion_period}
@@ -87,7 +76,6 @@ if submit_button:
         7. {additional_info}
         """
 
-        # Construct the full prompt
         full_prompt = f"""
         You are tasked with drafting T&Cs for the fulfilment of rewards given during promotional campaigns. You have a process for creating T&C's which you follow diligently.
         First, review your template and reference documents cited below enclosed in xml tags.
@@ -118,21 +106,17 @@ if submit_button:
                 if result:
                     st.markdown("## Generated T&Cs:")
                     st.markdown(result)
-                    # Add to chat history
                     st.session_state.chat_history.append({"role": "assistant", "content": "T&Cs generated successfully."})
                 else:
                     st.error("Failed to generate T&Cs. The response was empty.")
-            except ValueError as e:
-                st.error(str(e))
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-                st.error("If this persists, please check your API key and try again later.")
+                st.error("If this persists, please contact the administrator.")
             
-            # Add a small delay to prevent rapid consecutive requests
             time.sleep(1)
 
 else:
-    st.info("Please enter your Anthropic API Key and fill out the form to generate T&Cs.")
+    st.info("Please fill out the form to generate T&Cs.")
 
 # Display chat history
 st.subheader("Chat History")

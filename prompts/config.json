@@ -1,0 +1,6 @@
+{
+    "system_prompt": "system_prompt.md",
+    "template": "template.md",
+    "example1": "example1.md",
+    "example2": "example2.md"
+  }

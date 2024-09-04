@@ -2,7 +2,6 @@ import streamlit as st
 import anthropic
 import json
 import time
-import os
 
 # Load prompts from Markdown files
 @st.cache_data
@@ -30,8 +29,8 @@ def send_prompt_to_claude(prompt, system_prompt=""):
 
     try:
         response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=4096,
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=8192,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": prompt}
@@ -47,7 +46,7 @@ def send_prompt_to_claude(prompt, system_prompt=""):
         raise Exception(f"An unexpected error occurred: {str(e)}")
 
 # Streamlit UI
-st.title("T&C Generator Chatbot (Claude-3-Haiku)")
+st.title("T&C Generator Bot")
 
 # User input form
 with st.form("user_input_form"):
